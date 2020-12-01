@@ -61,21 +61,141 @@ class Game extends React.Component {
 					[null, null, null],
 					[null, null, null],
 					[null, null, null]
-				]
+				],
+				currentPlayer: "X",
+				gameOver: false,
+				isVictory: false,
+				isDraw: false,
 			}],
-			currentPlayer: "X",
-			gameOver: false
+			status: "Player To Move"
 		}
 	}
 
+	victoryColumns() {
+		const currentBoard = this.state.history[this.state.history.length - 1];
+		const squares = currentBoard.squares.slice();
+
+		let finalArray = squares.map((row) => row.filter((cell) => cell === currentBoard.currentPlayer).length === squares.length);
+
+
+		if (finalArray.includes(true)) {
+			console.log("Victory Columns");
+			return true;
+		}
+		return false;
+
+	}
+	victoryRows() {
+		const currentBoard = this.state.history[this.state.history.length - 1];
+		const squares = currentBoard.squares.slice();
+
+		let count = 0;
+		for (let row = 0; row < squares.length; row++) {
+			count = 0;
+			for (let column = 0; column < squares.length; column++) {
+				const cell = squares[column][row];
+				if (cell === currentBoard.currentPlayer) {
+					count++;
+				}
+			}
+		}
+
+		return count === this.state.squares.length;
+	}
+	victoryDiagonal() {
+		const currentBoard = this.state.history[this.state.history.length - 1];
+		const squares = currentBoard.squares.slice();
+
+		let count = 0;
+		for (let cell = 0; cell < squares.length; cell++) {
+			const value = squares[cell][cell];
+			if (value === currentBoard.currentPlayer) {
+				count++;
+			}
+		}
+
+		if (count === squares.length) {
+			console.log("Victory diagonal ->");
+			return true;
+		}
+
+		count = 0;
+		for (let row = 0, column = squares.length - 1; row < squares.length; row++, column--) {
+			const cell = squares[row][column];
+			if (cell === currentBoard.currentPlayer) {
+				count++;
+			}
+		}
+		if (count === squares.length) {
+			console.log("Victory diagonal <-");
+			return true;
+		}
+		return false;
+	}
+
+	hasVictory() {
+		let victory = this.victoryColumns() || this.victoryRows() || this.victoryDiagonal();
+
+		this.setState({ isVictory: victory });
+
+		return victory;
+	}
+
+	hasDraw() {
+		const currentBoard = this.state.history[this.state.history.length - 1];
+		const squares = currentBoard.squares.slice();
+
+		for (let row = 0; row < squares.length; row++) {
+			for (let column = 0; column < squares.length; column++) {
+				const cell = squares[row][column];
+				if (cell === null) {
+					return false;
+				}
+			}
+		}
+		this.setState({
+			isDraw: true
+		});
+		return true;
+	}
+
+	changePlayer() {
+		return this.state.currentPlayer === "X" ? "O" : "X";
+	}
+
+	handleClick(row, column) {
+		let squares = this.state.squares.slice();
+		let currentSymbol = this.state.currentPlayer;
+
+		if (squares[row][column] !== null || this.state.gameOver) {
+			return;
+		}
+		squares[row][column] = currentSymbol;
+
+		let gameOver = this.hasDraw() || this.hasVictory();
+
+		this.setState({
+			squares: squares,
+			gameOver: gameOver,
+			currentPlayer: gameOver ? currentSymbol : this.changePlayer()
+		})
+	}
+
 	render() {
-		const status = "";
+
+		let status = `Player To Move: ${this.state.currentPlayer}`;
+		if (this.state.isDraw) {
+			status = "Game Drawed";
+		}
+		else if (this.state.isVictory) {
+			status = `Game Won by: ${this.state.currentPlayer}`;
+		}
 		return (
 			<div className="game">
 				<div className="game-board">
 					<Board
-						squares={this.state.history[0].squares}
-						onClick={() => { console.log("click") }}
+						squares={this.state.squares}
+						onClick={(row, column) => { this.handleClick(row, column); }}
 					/>
 				</div>
 
