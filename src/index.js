@@ -65,14 +65,14 @@ class Game extends React.Component {
 				currentPlayer: "X",
 				gameOver: false,
 				isVictory: false,
-				isDraw: false,
+				isDraw: false
 			}],
+			gameTurnNumber: 0,
 			status: "Player To Move"
 		}
 	}
 
-	victoryColumns() {
-		const currentBoard = this.state.history[this.state.history.length - 1];
+	victoryColumns(currentBoard) {
 		const squares = currentBoard.squares.slice();
 
 		let finalArray = squares.map((row) => row.filter((cell) => cell === currentBoard.currentPlayer).length === squares.length);
@@ -85,8 +85,7 @@ class Game extends React.Component {
 		return false;
 
 	}
-	victoryRows() {
-		const currentBoard = this.state.history[this.state.history.length - 1];
+	victoryRows(currentBoard) {
 		const squares = currentBoard.squares.slice();
 
 		let count = 0;
@@ -98,12 +97,14 @@ class Game extends React.Component {
 					count++;
 				}
 			}
+			if (count === currentBoard.squares.length) {
+				return true;
+			}
 		}
 
-		return count === this.state.squares.length;
+		return false;
 	}
-	victoryDiagonal() {
-		const currentBoard = this.state.history[this.state.history.length - 1];
+	victoryDiagonal(currentBoard) {
 		const squares = currentBoard.squares.slice();
 
 		let count = 0;
@@ -133,16 +134,12 @@ class Game extends React.Component {
 		return false;
 	}
 
-	hasVictory() {
-		let victory = this.victoryColumns() || this.victoryRows() || this.victoryDiagonal();
-
-		this.setState({ isVictory: victory });
-
+	hasVictory(currentBoard) {
+		let victory = this.victoryColumns(currentBoard) || this.victoryRows(currentBoard) || this.victoryDiagonal(currentBoard);
 		return victory;
 	}
 
-	hasDraw() {
-		const currentBoard = this.state.history[this.state.history.length - 1];
+	hasDraw(currentBoard) {
 		const squares = currentBoard.squares.slice();
 
 		for (let row = 0; row < squares.length; row++) {
@@ -159,48 +156,85 @@ class Game extends React.Component {
 		return true;
 	}
 
-	changePlayer() {
-		return this.state.currentPlayer === "X" ? "O" : "X";
+	changePlayer(currentPlayer) {
+		return currentPlayer === "X" ? "O" : "X";
+	}
+
+	jumpToTurn(turnNumber) {
+		this.setState({
+			gameTurnNumber: turnNumber
+		})
+	}
+
+	duplicateBoardSquares(squares) {
+		return JSON.parse(JSON.stringify(squares));
 	}
 
 	handleClick(row, column) {
-		let squares = this.state.squares.slice();
-		let currentSymbol = this.state.currentPlayer;
+		const history = this.state.history.slice(0, this.state.gameTurnNumber + 1);
+		const currentState = history[history.length - 1];
 
-		if (squares[row][column] !== null || this.state.gameOver) {
+		let squares = this.duplicateBoardSquares(currentState.squares);
+		let currentSymbol = currentState.currentPlayer;
+
+		if (squares[row][column] !== null || currentState.gameOver) {
 			return;
 		}
 		squares[row][column] = currentSymbol;
 
-		let gameOver = this.hasDraw() || this.hasVictory();
+		const victory = this.hasVictory(currentState);
+		const draw = this.hasDraw(currentState);
+		let gameOver = victory || draw;
 
 		this.setState({
-			squares: squares,
-			gameOver: gameOver,
-			currentPlayer: gameOver ? currentSymbol : this.changePlayer()
+			history: history.concat([{
+				squares: squares,
+				currentPlayer: gameOver ? currentSymbol : this.changePlayer(currentSymbol),
+				gameOver: gameOver,
+				isDraw: draw,
+				isVictory: victory,
+			}]),
+			gameTurnNumber: history.length,
 		})
 	}
 
 	render() {
+		const history = this.state.history;
+		const currentState = history[this.state.gameTurnNumber];
+		const currentPlayer = currentState.currentPlayer;
 
-		let status = `Player To Move: ${this.state.currentPlayer}`;
-		if (this.state.isDraw) {
+		let status = `Player To Move: ${currentPlayer}`;
+		if (currentState.isDraw) {
 			status = "Game Drawed";
 		}
-		else if (this.state.isVictory) {
-			status = `Game Won by: ${this.state.currentPlayer}`;
+		else if (currentState.isVictory) {
+			status = `Game Won by: ${currentPlayer}`;
 		}
+
+		const moves = history.map((step, move) => {
+			const desc = move ?
+				'Go to move #' + move :
+				'Go to game start';
+
+			return (
+				<li key={move}>
+					<button className="historyMove" onClick={() => this.jumpToTurn(move)}>{desc}</button>
+				</li>
+			);
+		});
+
 		return (
 			<div className="game">
 				<div className="game-board">
 					<Board
-						squares={this.state.squares}
+						squares={currentState.squares}
 						onClick={(row, column) => { this.handleClick(row, column); }}
 					/>
 				</div>
 
 				<div className="game-info">
 					<div>{status}</div>
+					<ol>{moves}</ol>
 				</div>
 			</div>
 		);
