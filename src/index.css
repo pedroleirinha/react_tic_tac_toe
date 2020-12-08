@@ -63,3 +63,25 @@ ol, ul {
 	font-size: 1em;
 	margin: 2px 0;
 }
+
+.focus{
+	font-weight: bold;
+	background-color: #607D8B;
+}
+
+.sortButton{
+    margin: 2%;
+    width: 100%;
+    padding: 0;
+    font-size: 2em;
+	text-align: center;
+	border:none;
+	background-color: transparent;
+	cursor: pointer;
+}
+
+#buttonsContainer{
+    display: flex;
+	justify-content: space-around;
+	margin: 9% 0;
+}
