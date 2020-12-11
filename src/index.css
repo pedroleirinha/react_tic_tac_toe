@@ -85,3 +85,11 @@ ol, ul {
 	justify-content: space-around;
 	margin: 9% 0;
 }
+
+.winnerTag{
+ 	background-color: #b53f3f;
+}
+
+.winnerSquare{
+	background-color: rgb(139 195 74 / 46%);
+}

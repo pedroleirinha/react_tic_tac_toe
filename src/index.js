@@ -7,7 +7,7 @@ import $ from 'jquery';
 
 function Square(props) {
     let index = 0;
-    return (<button className="square"
+    return (<button className={`square ${props.winnerSquare ? "winnerSquare" : ""}`}
         id={`button-${index}`}
         onClick={props.onClick} > { props.value}
     </button>)
@@ -15,8 +15,31 @@ function Square(props) {
 
 class Board extends React.Component {
 
+    isWinnerSquare(row, column) {
+        const winnerMoves = this.props.winnerMoveSet;
+
+        if (winnerMoves === null) {
+            return false;
+        }
+
+
+        for (const winnerSquare of winnerMoves) {
+            const positions = winnerSquare.split("-");
+            const winnerRow = parseInt(positions[0]);
+            const winnerColumn = parseInt(positions[1]);
+
+            if (row === winnerRow && column === winnerColumn) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     renderSquare(row, column) {
-        return (<Square value={this.props.squares[row][column]}
+        return (<Square
+            winnerSquare={this.isWinnerSquare(row, column)}
+            value={this.props.squares[row][column]}
             onClick={
                 () => this.props.onClick(row, column)
             }
@@ -66,72 +89,109 @@ class Game extends React.Component {
                 lastMove: { row: 0, column: 0 },
             }],
             gameTurnNumber: 0,
-            status: "Player To Move"
+            status: "Player To Move",
+            winnerMoveSet: []
         }
     }
 
+    // createVictoryMoveSet(index) {
+    //     for (let index = 0; index < array.length; index++) {
+    //         const element = array[index];
+
+    //     }
+    // }
+
     victoryColumns(squares, currentPlayer) {
+        let winnerMoveSet = [];
 
-        let finalArray = squares.map((row) => row.filter((cell) => cell === currentPlayer).length === squares.length);
+        let finalArray = squares
+            .map((row) => row
+                .filter((cell) => cell === currentPlayer).length === squares.length);
 
-
-        if (finalArray.includes(true)) {
-            console.log("Victory Columns");
-            return true;
+        for (let position = 0; position < finalArray.length; position++) {
+            if (finalArray[position]) {
+                for (let index = 0; index < finalArray.length; index++) {
+                    winnerMoveSet.push(`${position}-${index}`);
+                }
+            }
         }
-        return false;
+
+        if (winnerMoveSet.length !== 0) {
+            console.log("Victory Columns");
+            return winnerMoveSet;
+        }
+        return null;
 
     }
     victoryRows(squares, currentPlayer) {
 
         let count = 0;
         for (let row = 0; row < squares.length; row++) {
+            let winnerMoveSet = [];
             count = 0;
             for (let column = 0; column < squares.length; column++) {
                 const cell = squares[column][row];
                 if (cell === currentPlayer) {
+                    winnerMoveSet.push(`${column}-${row}`);
                     count++;
                 }
             }
             if (count === squares.length) {
-                return true;
+                return winnerMoveSet;
             }
         }
 
-        return false;
+        return null;
     }
     victoryDiagonal(squares, currentPlayer) {
-
+        let winnerMoveSet = [];
         let count = 0;
         for (let cell = 0; cell < squares.length; cell++) {
             const value = squares[cell][cell];
             if (value === currentPlayer) {
+                winnerMoveSet.push(`${cell}-${cell}`);
                 count++;
             }
         }
 
         if (count === squares.length) {
             console.log("Victory diagonal ->");
-            return true;
+            return winnerMoveSet;
         }
 
+        winnerMoveSet = [];
         count = 0;
-        for (let row = 0, column = squares.length - 1; row < squares.length; row++) {
+        for (let row = 0, column = squares.length - 1; row < squares.length; row++, column--) {
             const cell = squares[row][column];
             if (cell === currentPlayer) {
+                winnerMoveSet.push(`${column}-${row}`);
                 count++;
             }
         }
         if (count === squares.length) {
             console.log("Victory diagonal <-");
-            return true;
+            return winnerMoveSet;
         }
-        return false;
+        return null;
     }
 
     hasVictory(squares, currentPlayer) {
-        let victory = this.victoryColumns(squares, currentPlayer) || this.victoryRows(squares, currentPlayer) || this.victoryDiagonal(squares, currentPlayer);
-        return victory;
+        let result;
+
+        result = this.victoryColumns(squares, currentPlayer);
+        if (result !== null) {
+            return result;
+        }
+        result = this.victoryRows(squares, currentPlayer);
+        if (result !== null) {
+            return result;
+        }
+        result = this.victoryDiagonal(squares, currentPlayer);
+        if (result !== null) {
+            return result;
+        }
+        // let victory = this.victoryRows(squares, currentPlayer) || this.victoryDiagonal(squares, currentPlayer);
+        return null;
     }
 
     hasDraw(squares) {
@@ -173,9 +233,11 @@ class Game extends React.Component {
         }
         squares[row][column] = currentSymbol;
 
-        const victory = this.hasVictory(squares, currentSymbol);
+        const victoryMoveSet = this.hasVictory(squares, currentSymbol);
+        const isVictory = victoryMoveSet !== null;
         const draw = this.hasDraw(squares);
-        let gameOver = victory || draw;
+
+        let gameOver = isVictory || draw;
 
         this.setState({
             history: history.concat([{
@@ -183,9 +245,10 @@ class Game extends React.Component {
                 currentPlayer: gameOver ? currentSymbol : this.changePlayer(currentSymbol),
                 gameOver: gameOver,
                 isDraw: draw,
-                isVictory: victory,
+                isVictory: isVictory,
                 lastMove: { row, column }
             }]),
+            winnerMoveSet: victoryMoveSet,
             gameTurnNumber: history.length,
             historyOrderAsc: true
         })
@@ -202,14 +265,18 @@ class Game extends React.Component {
 
     generateHistoryLabels(history, order) {
         const list = history.map((step, move) => {
+
             const row = step.lastMove.row, column = step.lastMove.column;
             const desc = move ?
                 `Go to move #${move} - (${row + 1},${column + 1})` :
                 'Go to game start';
+
+
+
             return (
                 <li key={move} >
                     <button
-                        className="historyMove"
+                        className={`historyMove ${step.isVictory ? "winnerTag" : ""}`}
                         onClick={(data) => {
 
                             this.focusButton(data.target);
@@ -230,10 +297,10 @@ class Game extends React.Component {
         const currentPlayer = currentState.currentPlayer;
 
         let status = `Player To Move: ${currentPlayer}`;
-        if (currentState.isDraw) {
-            status = "Game Drawed";
-        } else if (currentState.isVictory) {
+        if (currentState.isVictory) {
             status = `Game Won by: ${currentPlayer}`;
+        } else if (currentState.isDraw) {
+            status = "Game Drawed";
         }
 
         const moves = this.generateHistoryLabels(history, this.state.historyOrderAsc);
@@ -242,6 +309,7 @@ class Game extends React.Component {
             <div className="game" >
                 <div className="game-board" >
                     <Board
+                        winnerMoveSet={this.state.winnerMoveSet}
                         squares={currentState.squares}
                         onClick={(row, column) => { this.handleClick(row, column); }
                         }
