@@ -94,13 +94,6 @@ class Game extends React.Component {
         }
     }
 
-    // createVictoryMoveSet(index) {
-    //     for (let index = 0; index < array.length; index++) {
-    //         const element = array[index];
-
-    //     }
-    // }
-
     victoryColumns(squares, currentPlayer) {
         let winnerMoveSet = [];
 
@@ -190,7 +183,6 @@ class Game extends React.Component {
         if (result !== null) {
             return result;
         }
-        // let victory = this.victoryRows(squares, currentPlayer) || this.victoryDiagonal(squares, currentPlayer);
         return null;
     }
 
